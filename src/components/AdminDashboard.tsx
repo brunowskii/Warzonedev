@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Trophy, Settings, Download, Image, RotateCcw, Sliders, Clock, Key, Bell, AlertTriangle, Menu, X, Archive, UserPlus, Eye, Shield, Plus, Play, Copy, Tv } from 'lucide-react';
+import { Users, Trophy, Settings, Download, Image, RotateCcw, Sliders, Clock, Key, Bell, AlertTriangle, Menu, X, Archive, UserPlus, Eye, Shield, Plus, Play, Copy, Tv, Calculator } from 'lucide-react';
 import GlassPanel from './GlassPanel';
 import TournamentCreator from './TournamentCreator';
 import MultiplierSettings from './MultiplierSettings';
@@ -11,6 +11,7 @@ import AuditLogViewer from './AuditLogViewer';
 import TournamentArchive from './TournamentArchive';
 import TournamentManagement from './TournamentManagement';
 import OBSPluginManager from './OBSPluginManager';
+import ScoreAssignment from './ScoreAssignment';
 import { useRealTimeData } from '../hooks/useRealTimeData';
 import { Team, Match, TeamStats, PendingSubmission, ScoreAdjustment, Manager, AuditLog, Tournament } from '../types';
 import { generateUniqueTeamCode } from '../utils/teamCodeGenerator';
@@ -22,7 +23,7 @@ interface AdminDashboardProps {
 }
 
 export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'tournaments' | 'teams' | 'scores' | 'pending' | 'adjustments' | 'managers' | 'audit' | 'archive'>('tournaments');
+  const [activeTab, setActiveTab] = useState<'tournaments' | 'teams' | 'scores' | 'pending' | 'adjustments' | 'managers' | 'audit' | 'archive' | 'assign-scores'>('tournaments');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedTournament, setSelectedTournament] = useState<string>('');
   const [showTournamentCreator, setShowTournamentCreator] = useState(false);
@@ -431,6 +432,7 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
 
   const tabItems = [
     { id: 'tournaments', label: 'TORNEI', icon: Trophy },
+    { id: 'assign-scores', label: 'ASSEGNA PUNTEGGI', icon: Calculator },
     { id: 'managers', label: 'GESTORI', icon: UserPlus },
     { id: 'audit', label: 'AUDIT LOG', icon: Eye },
     { id: 'archive', label: 'ARCHIVIO', icon: Archive }
@@ -748,6 +750,37 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
           />
         )}
 
+        {/* Score Assignment Tab */}
+        {activeTab === 'assign-scores' && selectedTournament && (
+          <ScoreAssignment
+            tournament={tournaments[selectedTournament]}
+            teams={Object.values(teams).filter(team => team.tournamentId === selectedTournament)}
+            matches={matches}
+            setMatches={setMatches}
+            multipliers={multipliers}
+            auditLogs={auditLogs}
+            setAuditLogs={setAuditLogs}
+            userRole="admin"
+            userIdentifier="admin"
+          />
+        )}
+
+        {activeTab === 'assign-scores' && !selectedTournament && (
+          <GlassPanel className="p-6 text-center">
+            <div className="text-ice-blue/60 font-mono">
+              <Calculator className="w-16 h-16 mx-auto mb-4 opacity-50" />
+              <p className="text-xl">Seleziona un torneo</p>
+              <p className="text-sm">Scegli un torneo attivo per assegnare i punteggi</p>
+              <button
+                onClick={() => setActiveTab('tournaments')}
+                className="mt-4 px-4 py-2 bg-ice-blue/20 border border-ice-blue/50 text-ice-blue rounded-lg hover:bg-ice-blue/30 transition-colors font-mono"
+              >
+                VAI AI TORNEI
+              </button>
+            </div>
+          </GlassPanel>
+        )}
+
         {/* Copyright */}
         <div className="mt-8 text-center">
           <div className="text-xs text-ice-blue/40 font-mono">
@@ -769,6 +802,10 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
       <MultiplierSettings 
         isOpen={showMultiplierSettings}
         onClose={() => setShowMultiplierSettings(false)}
+        auditLogs={auditLogs}
+        setAuditLogs={setAuditLogs}
+        userIdentifier="admin"
+        userRole="admin"
       />
 
       <OBSPluginManager

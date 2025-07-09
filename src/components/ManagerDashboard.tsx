@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Users, Trophy, Settings, Download, Image, RotateCcw, Sliders, Clock, AlertTriangle, Menu, X, Shield } from 'lucide-react';
+import { Users, Trophy, Settings, Download, Image, RotateCcw, Sliders, Clock, AlertTriangle, Menu, X, Shield, Calculator } from 'lucide-react';
 import GlassPanel from './GlassPanel';
 import MultiplierSettings from './MultiplierSettings';
 import PendingSubmissions from './PendingSubmissions';
 import PenaltiesRewards from './PenaltiesRewards';
+import ScoreAssignment from './ScoreAssignment';
 import { useRealTimeData } from '../hooks/useRealTimeData';
 import { Team, Match, TeamStats, PendingSubmission, ScoreAdjustment, Manager, AuditLog, Tournament } from '../types';
 import { logAction } from '../utils/auditLogger';
@@ -16,7 +17,7 @@ interface ManagerDashboardProps {
 }
 
 export default function ManagerDashboard({ managerCode, tournamentId, onLogout }: ManagerDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'scores' | 'pending' | 'adjustments'>('scores');
+  const [activeTab, setActiveTab] = useState<'scores' | 'pending' | 'adjustments' | 'assign-scores'>('scores');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [teams] = useRealTimeData<Record<string, Team>>('teams', {});
   const [tournaments] = useRealTimeData<Record<string, Tournament>>('tournaments', {});
@@ -239,6 +240,7 @@ export default function ManagerDashboard({ managerCode, tournamentId, onLogout }
 
   const tabItems = [
     { id: 'scores', label: 'PUNTEGGI', icon: Trophy },
+    { id: 'assign-scores', label: 'ASSEGNA PUNTEGGI', icon: Calculator },
     { id: 'pending', label: 'APPROVAZIONI', icon: Clock, badge: tournamentPending.length },
     { id: 'adjustments', label: 'MODIFICHE', icon: AlertTriangle, badge: tournamentAdjustments.length }
   ];
@@ -389,6 +391,21 @@ export default function ManagerDashboard({ managerCode, tournamentId, onLogout }
             adjustments={tournamentAdjustments}
             onAddAdjustment={addScoreAdjustment}
             currentSection={currentTournament.type}
+          />
+        )}
+
+        {/* Score Assignment Tab */}
+        {activeTab === 'assign-scores' && (
+          <ScoreAssignment
+            tournament={currentTournament}
+            teams={tournamentTeams}
+            matches={matches}
+            setMatches={setMatches}
+            multipliers={multipliers}
+            auditLogs={auditLogs}
+            setAuditLogs={setAuditLogs}
+            userRole="manager"
+            userIdentifier={managerCode}
           />
         )}
 
@@ -545,6 +562,10 @@ export default function ManagerDashboard({ managerCode, tournamentId, onLogout }
       <MultiplierSettings 
         isOpen={showMultiplierSettings}
         onClose={() => setShowMultiplierSettings(false)}
+        auditLogs={auditLogs}
+        setAuditLogs={setAuditLogs}
+        userIdentifier={managerCode}
+        userRole="manager"
       />
     </div>
   );
