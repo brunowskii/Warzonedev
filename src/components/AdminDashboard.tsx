@@ -12,6 +12,7 @@ import TournamentArchive from './TournamentArchive';
 import TournamentManagement from './TournamentManagement';
 import OBSPluginManager from './OBSPluginManager';
 import ScoreAssignment from './ScoreAssignment';
+import ScoreCalculationTest from './ScoreCalculationTest';
 import { useRealTimeData } from '../hooks/useRealTimeData';
 import { Team, Match, TeamStats, PendingSubmission, ScoreAdjustment, Manager, AuditLog, Tournament } from '../types';
 import { generateUniqueTeamCode } from '../utils/teamCodeGenerator';
@@ -44,6 +45,7 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
   const [showTeamCode, setShowTeamCode] = useState<{ name: string; code: string } | null>(null);
   const [showLoginCodes, setShowLoginCodes] = useState(false);
   const [showOBSPlugin, setShowOBSPlugin] = useState(false);
+  const [showScoreTest, setShowScoreTest] = useState(false);
 
   const activeTournaments = Object.values(tournaments).filter(t => t.status === 'active');
   const completedTournaments = Object.values(tournaments).filter(t => t.status === 'completed');
@@ -480,6 +482,13 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
                 <span className="hidden sm:inline">OBS</span>
               </button>
               <button
+                onClick={() => setShowScoreTest(true)}
+                className="hidden sm:flex items-center space-x-2 px-3 sm:px-4 py-2 bg-green-500/20 border border-green-500/50 text-green-400 rounded-lg hover:bg-green-500/30 transition-colors font-mono text-xs sm:text-sm"
+              >
+                <Calculator className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">TEST</span>
+              </button>
+              <button
                 onClick={() => setShowTournamentCreator(true)}
                 className="hidden sm:flex items-center space-x-2 px-3 sm:px-4 py-2 bg-green-500/20 border border-green-500/50 text-green-400 rounded-lg hover:bg-green-500/30 transition-colors font-mono text-xs sm:text-sm"
               >
@@ -555,6 +564,13 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
               >
                 <Tv className="w-4 h-4" />
                 <span>OBS STREAMING</span>
+              </button>
+              <button
+                onClick={() => setShowScoreTest(true)}
+                className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-green-500/20 border border-green-500/50 text-green-400 rounded-lg hover:bg-green-500/30 transition-colors font-mono text-xs"
+              >
+                <Calculator className="w-4 h-4" />
+                <span>TEST CALCOLO PUNTEGGI</span>
               </button>
               <button
                 onClick={createBlackCrowDemo}
@@ -811,6 +827,11 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
       <OBSPluginManager
         isOpen={showOBSPlugin}
         onClose={() => setShowOBSPlugin(false)}
+      />
+
+      <ScoreCalculationTest
+        isOpen={showScoreTest}
+        onClose={() => setShowScoreTest(false)}
       />
 
       {showTeamCode && (

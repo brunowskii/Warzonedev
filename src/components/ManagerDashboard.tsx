@@ -5,6 +5,7 @@ import MultiplierSettings from './MultiplierSettings';
 import PendingSubmissions from './PendingSubmissions';
 import PenaltiesRewards from './PenaltiesRewards';
 import ScoreAssignment from './ScoreAssignment';
+import ScoreCalculationTest from './ScoreCalculationTest';
 import { useRealTimeData } from '../hooks/useRealTimeData';
 import { Team, Match, TeamStats, PendingSubmission, ScoreAdjustment, Manager, AuditLog, Tournament } from '../types';
 import { logAction } from '../utils/auditLogger';
@@ -33,6 +34,7 @@ export default function ManagerDashboard({ managerCode, tournamentId, onLogout }
     19: 1.0, 20: 1.0
   });
   const [showMultiplierSettings, setShowMultiplierSettings] = useState(false);
+  const [showScoreTest, setShowScoreTest] = useState(false);
 
   const currentManager = Object.values(managers).find(m => m.code === managerCode);
   const currentTournament = tournaments[tournamentId];
@@ -304,6 +306,13 @@ export default function ManagerDashboard({ managerCode, tournamentId, onLogout }
                 <span className="hidden sm:inline">MOLTIPLICATORI</span>
               </button>
               <button
+                onClick={() => setShowScoreTest(true)}
+                className="hidden sm:flex items-center space-x-2 px-3 sm:px-4 py-2 bg-green-500/20 border border-green-500/50 text-green-400 rounded-lg hover:bg-green-500/30 transition-colors font-mono text-xs sm:text-sm"
+              >
+                <Calculator className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">TEST</span>
+              </button>
+              <button
                 onClick={onLogout}
                 className="px-2 sm:px-4 py-2 bg-red-500/20 border border-red-500/50 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors font-mono text-xs sm:text-sm"
               >
@@ -346,6 +355,13 @@ export default function ManagerDashboard({ managerCode, tournamentId, onLogout }
             >
               <Sliders className="w-4 h-4" />
               <span>MOLTIPLICATORI</span>
+            </button>
+            <button
+              onClick={() => setShowScoreTest(true)}
+              className="w-full mt-2 flex items-center justify-center space-x-2 px-4 py-3 bg-green-500/20 border border-green-500/50 text-green-400 rounded-lg hover:bg-green-500/30 transition-colors font-mono text-xs"
+            >
+              <Calculator className="w-4 h-4" />
+              <span>TEST CALCOLO</span>
             </button>
           </GlassPanel>
         )}
@@ -566,6 +582,11 @@ export default function ManagerDashboard({ managerCode, tournamentId, onLogout }
         setAuditLogs={setAuditLogs}
         userIdentifier={managerCode}
         userRole="manager"
+      />
+
+      <ScoreCalculationTest
+        isOpen={showScoreTest}
+        onClose={() => setShowScoreTest(false)}
       />
     </div>
   );
