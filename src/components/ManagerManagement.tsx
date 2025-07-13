@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { UserPlus, Trash2, Eye, EyeOff, Shield, Key, Users } from 'lucide-react';
+import { UserPlus, Trash2, Eye, EyeOff, Shield, Key, Users, Copy, Check, Lock, Unlock } from 'lucide-react';
 import GlassPanel from './GlassPanel';
 import { Manager, AuditLog } from '../types';
 import { generateUniqueManagerCode } from '../utils/managerCodeGenerator';
@@ -20,6 +20,8 @@ export default function ManagerManagement({
 }: ManagerManagementProps) {
   const [managerName, setManagerName] = useState('');
   const [showManagerCode, setShowManagerCode] = useState<{ name: string; code: string } | null>(null);
+  const [visibleCodes, setVisibleCodes] = useState<Set<string>>(new Set());
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   const createManager = () => {
     if (!managerName.trim()) return;
@@ -95,6 +97,33 @@ export default function ManagerManagement({
       'admin',
       { managerCode, managerName: manager.name }
     );
+  };
+
+  const toggleCodeVisibility = (managerCode: string) => {
+    setVisibleCodes(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(managerCode)) {
+        newSet.delete(managerCode);
+      } else {
+        newSet.add(managerCode);
+      }
+      return newSet;
+    });
+  };
+
+  const copyToClipboard = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedCode(code);
+      setTimeout(() => setCopiedCode(null), 2000);
+    } catch (error) {
+      console.error('Failed to copy:', error);
+    }
+  };
+
+  const maskCode = (code: string) => {
+    if (code.length <= 4) return '****';
+    return code.substring(0, 3) + '*'.repeat(code.length - 3);
   };
 
   const formatTime = (timestamp: number) => {
@@ -180,7 +209,27 @@ export default function ManagerManagement({
                     </div>
                     <div>
                       <div className="text-white font-bold font-mono">{manager.name}</div>
-                      <div className="text-ice-blue/60 text-sm font-mono">{manager.code}</div>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-ice-blue/60 text-sm font-mono">
+                          {visibleCodes.has(manager.code) ? manager.code : maskCode(manager.code)}
+                        </span>
+                        <button
+                          onClick={() => toggleCodeVisibility(manager.code)}
+                          className="p-1 text-ice-blue/60 hover:text-ice-blue transition-colors"
+                          title={visibleCodes.has(manager.code) ? 'Nascondi codice' : 'Mostra codice'}
+                        >
+                          {visibleCodes.has(manager.code) ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                        </button>
+                        {visibleCodes.has(manager.code) && (
+                          <button
+                            onClick={() => copyToClipboard(manager.code)}
+                            className="p-1 text-ice-blue/60 hover:text-ice-blue transition-colors"
+                            title="Copia codice"
+                          >
+                            {copiedCode === manager.code ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">

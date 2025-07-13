@@ -121,7 +121,7 @@ export default function PublicView({ onShowLogin }: PublicViewProps) {
                             {tournament.name}
                           </h3>
                           <div className="text-ice-blue/80 font-mono text-sm">
-                            {tournament.type} • {tournamentTeams.length} squadre
+                            {tournament.type} • {tournamentTeams.length} partecipanti
                           </div>
                         </div>
                         <div className="flex items-center space-x-2 text-ice-blue font-mono text-sm">

@@ -160,9 +160,12 @@ export default function LoginScreen({ onLogin, onBackToPublic }: LoginScreenProp
           </form>
 
           <div className="mt-6 text-xs text-ice-blue/50 font-mono">
-            <div>Admin: MISOKIETI, MISOKIETI8</div>
-            <div>Manager: Codici assegnati</div>
-            <div>Team: Codici squadra</div>
+            <div>• Admin: Codici amministratore</div>
+            <div>• Gestore: Codice fornito dall'admin</div>
+            <div>• Squadra: Codice fornito dall'organizzatore</div>
+            <div className="mt-2 text-yellow-400 text-xs">
+              ⚠️ Non condividere i tuoi codici di accesso
+            </div>
           </div>
         </GlassPanel>
       </div>

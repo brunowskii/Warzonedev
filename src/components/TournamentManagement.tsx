@@ -539,7 +539,9 @@ export default function TournamentManagement({
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="text-ice-blue font-mono text-sm">{team.lobby}</div>
-                          <div className="text-white font-bold">{team.name}</div>
+                          <div className="text-ice-blue/60 text-sm font-mono">
+                            Gestore • {manager.permissions.length} permessi
+                          </div>
                           <div className="text-ice-blue/60 font-mono text-xs">Codice: {team.code}</div>
                         </div>
                         <button
@@ -622,7 +624,9 @@ export default function TournamentManagement({
                           <div className="flex items-center justify-between">
                             <div>
                               <div className="text-white font-bold font-mono">{manager.name}</div>
-                              <div className="text-green-400/60 text-sm font-mono">{manager.code}</div>
+                              <div className="text-green-400/60 text-sm font-mono">
+                                Assegnato • Attivo
+                              </div>
                             </div>
                             <button
                               onClick={() => removeManager(managerCode)}

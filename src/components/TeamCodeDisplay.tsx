@@ -40,6 +40,9 @@ export default function TeamCodeDisplay({ teamName, teamCode, onClose }: TeamCod
         <div className="mb-6">
           <div className="p-6 bg-black/30 border-2 border-ice-blue/50 rounded-xl relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-ice-blue/5 to-transparent animate-shimmer" />
+            <div className="text-xs text-ice-blue/60 font-mono mb-2 text-center">
+              CODICE RISERVATO - NON CONDIVIDERE
+            </div>
             <div className="text-3xl font-bold text-ice-blue font-mono tracking-wider mb-2">
               {teamCode}
             </div>
@@ -69,9 +72,12 @@ export default function TeamCodeDisplay({ teamName, teamCode, onClose }: TeamCod
 
           <div className="text-sm text-ice-blue/60 font-mono bg-black/20 rounded-lg p-4">
             <div className="mb-2 text-ice-blue font-bold">ISTRUZIONI:</div>
-            <div>1. Condividi questo codice con il team</div>
-            <div>2. Il team userà questo codice per accedere</div>
-            <div>3. Il codice è valido fino alla fine del torneo</div>
+            <div>1. Fornisci questo codice SOLO al team autorizzato</div>
+            <div>2. Il team lo userà per accedere al sistema</div>
+            <div>3. Valido fino alla fine del torneo</div>
+            <div className="mt-2 text-red-400 text-xs">
+              ⚠️ ATTENZIONE: Non pubblicare o condividere pubblicamente
+            </div>
           </div>
         </div>
 

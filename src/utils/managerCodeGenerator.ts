@@ -1,15 +1,16 @@
 export function generateManagerCode(): string {
   // Avoid confusing characters: 0, O, I, 1
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let result = 'MGR-';
+  const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const numbers = '23456789';
+  let result = 'MGR';
   
-  // Generate format: MGR-ABC123 (avoiding 0 and O)
+  // Generate format: MGRABC123 (avoiding 0, O, I, 1)
   for (let i = 0; i < 3; i++) {
-    result += chars.charAt(Math.floor(Math.random() * 24)); // Letters only
+    result += letters.charAt(Math.floor(Math.random() * letters.length));
   }
   
   for (let i = 0; i < 3; i++) {
-    result += chars.charAt(Math.floor(Math.random() * 8) + 24); // Numbers only
+    result += numbers.charAt(Math.floor(Math.random() * numbers.length));
   }
   
   return result;

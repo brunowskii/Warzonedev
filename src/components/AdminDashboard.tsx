@@ -882,6 +882,9 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
               {/* Manager Codes */}
               <div className="p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg">
                 <h3 className="text-purple-400 font-mono font-bold mb-3">CODICI GESTORI</h3>
+                <div className="mb-3 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded text-yellow-400 text-xs font-mono">
+                  ⚠️ ATTENZIONE: Condividi questi codici solo con gestori autorizzati
+                </div>
                 <div className="space-y-2">
                   {Object.values(managers).filter(m => m.isActive).map((manager) => (
                     <div key={manager.code} className="flex items-center justify-between p-3 bg-black/20 rounded-lg">
@@ -909,6 +912,9 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
               {/* Team Codes */}
               <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
                 <h3 className="text-green-400 font-mono font-bold mb-3">CODICI SQUADRE ATTIVE</h3>
+                <div className="mb-3 p-2 bg-blue-500/10 border border-blue-500/30 rounded text-blue-400 text-xs font-mono">
+                  ℹ️ INFO: Questi codici vengono forniti automaticamente alle squadre
+                </div>
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {Object.values(teams).filter(team => {
                     const tournament = tournaments[team.tournamentId];
@@ -918,6 +924,9 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
                       <div>
                         <span className="text-white font-mono text-lg">{team.code}</span>
                         <div className="text-green-400/60 text-sm font-mono">{team.name}</div>
+                        <div className="text-green-400/40 text-xs font-mono">
+                          {tournaments[team.tournamentId]?.name}
+                        </div>
                       </div>
                       <button
                         onClick={() => copyToClipboard(team.code)}

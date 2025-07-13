@@ -281,7 +281,7 @@ export default function TeamDashboard({ teamCode, tournamentId, onLogout }: Team
                   {actualTeamName.toUpperCase()}
                 </h1>
                 <p className="text-ice-blue/80 font-mono text-xs sm:text-base">
-                  Codice: <span className="text-ice-blue font-bold">{teamCode}</span>
+                  Team ID: <span className="text-ice-blue font-bold">{teamCode.substring(0, 3)}***</span>
                   {currentPosition && (
                     <span className="ml-2 text-yellow-400">• #{currentPosition} in classifica</span>
                   )}
