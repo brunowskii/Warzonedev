@@ -41,63 +41,104 @@ export default function ManagerDashboard({ managerCode, tournamentId, onLogout }
   const managerName = currentManager?.name || 'Gestore';
 
   // Filter data for current tournament
-  const tournamentTeams = Object.values(teams).filter(team => team.tournamentId === tournamentId);
-  const tournamentMatches = matches.filter(match => match.tournamentId === tournamentId);
-  const tournamentPending = pendingSubmissions.filter(sub => sub.tournamentId === tournamentId);
-  const tournamentAdjustments = scoreAdjustments.filter(adj => adj.tournamentId === tournamentId);
+  const tournamentTeams = React.useMemo(() => {
+    try {
+      return Object.values(teams || {}).filter(team => team && team.tournamentId === tournamentId);
+    } catch (error) {
+      console.error('❌ Errore filtro teams manager:', error);
+      return [];
+    }
+  }, [teams, tournamentId]);
+
+  const tournamentMatches = React.useMemo(() => {
+    try {
+      return (matches || []).filter(match => match && match.tournamentId === tournamentId);
+    } catch (error) {
+      console.error('❌ Errore filtro matches manager:', error);
+      return [];
+    }
+  }, [matches, tournamentId]);
+
+  const tournamentPending = React.useMemo(() => {
+    try {
+      return (pendingSubmissions || []).filter(sub => sub && sub.tournamentId === tournamentId);
+    } catch (error) {
+      console.error('❌ Errore filtro pending manager:', error);
+      return [];
+    }
+  }, [pendingSubmissions, tournamentId]);
+
+  const tournamentAdjustments = React.useMemo(() => {
+    try {
+      return (scoreAdjustments || []).filter(adj => adj && adj.tournamentId === tournamentId);
+    } catch (error) {
+      console.error('❌ Errore filtro adjustments manager:', error);
+      return [];
+    }
+  }, [scoreAdjustments, tournamentId]);
 
   const approveSubmission = (submissionId: string) => {
-    const submission = pendingSubmissions.find(s => s.id === submissionId);
-    if (!submission) return;
+    try {
+      const submission = pendingSubmissions.find(s => s.id === submissionId);
+      if (!submission) return;
 
-    const multiplier = multipliers[submission.position] || 1;
-    const score = submission.kills * multiplier;
+      const multiplier = multipliers[submission.position] || 1;
+      const score = submission.kills * multiplier;
 
-    const newMatch: Match = {
-      id: `${submission.teamCode}-${Date.now()}`,
-      position: submission.position,
-      kills: submission.kills,
-      score,
-      teamCode: submission.teamCode,
-      photos: submission.photos,
-      status: 'approved',
-      submittedAt: submission.submittedAt,
-      reviewedAt: Date.now(),
-      reviewedBy: managerCode,
-      tournamentId
-    };
+      const newMatch: Match = {
+        id: `${submission.teamCode}-${Date.now()}`,
+        position: submission.position,
+        kills: submission.kills,
+        score,
+        teamCode: submission.teamCode,
+        photos: submission.photos,
+        status: 'approved',
+        submittedAt: submission.submittedAt,
+        reviewedAt: Date.now(),
+        reviewedBy: managerCode,
+        tournamentId
+      };
 
-    setMatches(prev => [...prev, newMatch]);
-    setPendingSubmissions(prev => prev.filter(s => s.id !== submissionId));
+      setMatches(prev => [...prev, newMatch]);
+      setPendingSubmissions(prev => prev.filter(s => s.id !== submissionId));
 
-    // Log action
-    logAction(
-      auditLogs,
-      setAuditLogs,
-      'SUBMISSION_APPROVED',
-      `Sottomissione approvata per ${submission.teamName}: ${submission.position}° posto, ${submission.kills} kills`,
-      managerCode,
-      'manager',
-      { teamCode: submission.teamCode, submissionId, tournamentId }
-    );
+      // Log action
+      logAction(
+        auditLogs,
+        setAuditLogs,
+        'SUBMISSION_APPROVED',
+        `Sottomissione approvata per ${submission.teamName}: ${submission.position}° posto, ${submission.kills} kills`,
+        managerCode,
+        'manager',
+        { teamCode: submission.teamCode, submissionId, tournamentId }
+      );
+    } catch (error) {
+      console.error('❌ Errore approvazione manager:', error);
+      alert('Errore durante l\'approvazione');
+    }
   };
 
   const rejectSubmission = (submissionId: string) => {
-    const submission = pendingSubmissions.find(s => s.id === submissionId);
-    if (!submission) return;
+    try {
+      const submission = pendingSubmissions.find(s => s.id === submissionId);
+      if (!submission) return;
 
-    setPendingSubmissions(prev => prev.filter(s => s.id !== submissionId));
+      setPendingSubmissions(prev => prev.filter(s => s.id !== submissionId));
 
-    // Log action
-    logAction(
-      auditLogs,
-      setAuditLogs,
-      'SUBMISSION_REJECTED',
-      `Sottomissione rifiutata per ${submission.teamName}`,
-      managerCode,
-      'manager',
-      { teamCode: submission.teamCode, submissionId, tournamentId }
-    );
+      // Log action
+      logAction(
+        auditLogs,
+        setAuditLogs,
+        'SUBMISSION_REJECTED',
+        `Sottomissione rifiutata per ${submission.teamName}`,
+        managerCode,
+        'manager',
+        { teamCode: submission.teamCode, submissionId, tournamentId }
+      );
+    } catch (error) {
+      console.error('❌ Errore rifiuto manager:', error);
+      alert('Errore durante il rifiuto');
+    }
   };
 
   const addScoreAdjustment = (adjustmentData: Omit<ScoreAdjustment, 'id' | 'appliedAt' | 'appliedBy' | 'tournamentId'>) => {

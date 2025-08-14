@@ -10,6 +10,7 @@ import StreamingPage from './components/StreamingPage';
 import ErrorBoundary from './components/ErrorBoundary';
 import { UserType } from './types';
 import { isGlobalSystemActive } from './utils/globalSync';
+import { autoRepairData } from './utils/dataValidator';
 
 function App() {
   const [userType, setUserType] = useState<UserType>(null);
@@ -26,6 +27,9 @@ function App() {
       // Verifica sistema globale
       const globalActive = isGlobalSystemActive();
       console.log(`🌍 Sistema globale: ${globalActive ? 'ATTIVO' : 'OFFLINE'}`);
+      
+      // Riparazione automatica dati
+      autoRepairData();
       
       setIsInitialized(true);
     };

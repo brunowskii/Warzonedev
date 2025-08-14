@@ -39,8 +39,24 @@ export default function TeamDashboard({ teamCode, tournamentId, onLogout }: Team
   const [showFirstTimeSetup, setShowFirstTimeSetup] = useState(false);
 
   // Find team and tournament
-  const currentTeam = Object.values(teams).find(team => team.code === teamCode);
-  const currentTournament = tournaments[tournamentId];
+  const currentTeam = React.useMemo(() => {
+    try {
+      return Object.values(teams || {}).find(team => team && team.code === teamCode);
+    } catch (error) {
+      console.error('❌ Errore ricerca team:', error);
+      return null;
+    }
+  }, [teams, teamCode]);
+
+  const currentTournament = React.useMemo(() => {
+    try {
+      return tournaments[tournamentId] || null;
+    } catch (error) {
+      console.error('❌ Errore ricerca torneo:', error);
+      return null;
+    }
+  }, [tournaments, tournamentId]);
+
   const actualTeamName = currentTeam?.name || teamCode;
 
   // Check if this is first time login
@@ -50,111 +66,174 @@ export default function TeamDashboard({ teamCode, tournamentId, onLogout }: Team
     }
   }, [currentTeam]);
 
-  const teamMatches = matches.filter(match => 
-    match.teamCode === teamCode && 
-    match.tournamentId === tournamentId && 
-    match.status === 'approved'
-  );
-  const teamPending = pendingSubmissions.filter(sub => 
-    sub.teamCode === teamCode && 
-    sub.tournamentId === tournamentId
-  );
-  const teamAdjustments = scoreAdjustments.filter(adj => 
-    adj.teamCode === teamCode && 
-    adj.tournamentId === tournamentId
-  );
+  // Filtri sicuri per dati del team
+  const teamMatches = React.useMemo(() => {
+    try {
+      return (matches || []).filter(match => 
+        match && 
+        match.teamCode === teamCode && 
+        match.tournamentId === tournamentId && 
+        match.status === 'approved'
+      );
+    } catch (error) {
+      console.error('❌ Errore filtro team matches:', error);
+      return [];
+    }
+  }, [matches, teamCode, tournamentId]);
+
+  const teamPending = React.useMemo(() => {
+    try {
+      return (pendingSubmissions || []).filter(sub => 
+        sub && 
+        sub.teamCode === teamCode && 
+        sub.tournamentId === tournamentId
+      );
+    } catch (error) {
+      console.error('❌ Errore filtro team pending:', error);
+      return [];
+    }
+  }, [pendingSubmissions, teamCode, tournamentId]);
+
+  const teamAdjustments = React.useMemo(() => {
+    try {
+      return (scoreAdjustments || []).filter(adj => 
+        adj && 
+        adj.teamCode === teamCode && 
+        adj.tournamentId === tournamentId
+      );
+    } catch (error) {
+      console.error('❌ Errore filtro team adjustments:', error);
+      return [];
+    }
+  }, [scoreAdjustments, teamCode, tournamentId]);
   
   const totalSubmissions = teamMatches.length + teamPending.length;
   const maxMatches = currentTournament?.settings.totalMatches || 4;
   const canAddMatch = totalSubmissions < maxMatches;
 
   const saveFirstTimeSetup = () => {
-    if (!clanName.trim() || !playerName.trim() || !currentTeam) return;
+    try {
+      if (!clanName.trim() || !playerName.trim() || !currentTeam) return;
 
-    setTeams(prev => ({
-      ...prev,
-      [currentTeam.id]: {
-        ...currentTeam,
-        clanName: clanName.trim(),
-        playerName: playerName.trim()
-      }
-    }));
+      setTeams(prev => ({
+        ...prev,
+        [currentTeam.id]: {
+          ...currentTeam,
+          clanName: clanName.trim(),
+          playerName: playerName.trim()
+        }
+      }));
 
-    setShowFirstTimeSetup(false);
+      setShowFirstTimeSetup(false);
+    } catch (error) {
+      console.error('❌ Errore salvataggio setup:', error);
+      alert('Errore durante il salvataggio delle informazioni');
+    }
   };
 
   const addMatch = async () => {
-    if (!canAddMatch || kills < 0 || position < 1 || photos.length < 2) return;
+    try {
+      if (!canAddMatch || kills < 0 || position < 1 || photos.length < 2) return;
 
-    setIsSubmitting(true);
-    
-    // Cinematic delay for better UX
-    await new Promise(resolve => setTimeout(resolve, 800));
-
-    const newSubmission: PendingSubmission = {
-      id: `${teamCode}-${Date.now()}`,
-      teamCode,
-      teamName: actualTeamName,
-      position,
-      kills,
-      photos: [...photos],
-      submittedAt: Date.now(),
-      tournamentId
-    };
-
-    setPendingSubmissions(prev => [...prev, newSubmission]);
-    setKills(0);
-    setPosition(1);
-    setPhotos([]);
-    setIsSubmitting(false);
-  };
-
-  const getBestScores = () => {
-    const countedMatches = currentTournament?.settings.countedMatches || 3;
-    return teamMatches
-      .map(match => match.score)
-      .sort((a, b) => b - a)
-      .slice(0, countedMatches);
-  };
-
-  const getTotalScore = () => {
-    const bestScores = getBestScores();
-    return bestScores.reduce((sum, score) => sum + score, 0);
-  };
-
-  const getAdjustmentTotal = () => {
-    return teamAdjustments.reduce((sum, adj) => sum + adj.points, 0);
-  };
-
-  const getFinalScore = () => {
-    return getTotalScore() + getAdjustmentTotal();
-  };
-
-  const getCurrentPosition = () => {
-    // Calculate current position in tournament leaderboard
-    const tournamentTeams = Object.values(teams).filter(team => team.tournamentId === tournamentId);
-    const leaderboard = tournamentTeams.map(team => {
-      const tMatches = matches.filter(m => m.teamCode === team.code && m.tournamentId === tournamentId && m.status === 'approved');
-      const tAdjustments = scoreAdjustments.filter(adj => adj.teamCode === team.code && adj.tournamentId === tournamentId);
+      setIsSubmitting(true);
       
+      // Cinematic delay for better UX
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      const newSubmission: PendingSubmission = {
+        id: `${teamCode}-${Date.now()}`,
+        teamCode,
+        teamName: actualTeamName,
+        position,
+        kills,
+        photos: [...photos],
+        submittedAt: Date.now(),
+        tournamentId
+      };
+
+      setPendingSubmissions(prev => [...prev, newSubmission]);
+      setKills(0);
+      setPosition(1);
+      setPhotos([]);
+      setIsSubmitting(false);
+    } catch (error) {
+      console.error('❌ Errore aggiunta match:', error);
+      alert('Errore durante l\'invio del punteggio');
+      setIsSubmitting(false);
+    }
+  };
+
+  const getBestScores = React.useCallback(() => {
+    try {
       const countedMatches = currentTournament?.settings.countedMatches || 3;
-      const bestScores = tMatches.map(m => m.score).sort((a, b) => b - a).slice(0, countedMatches);
-      const totalScore = bestScores.reduce((sum, score) => sum + score, 0);
-      const adjustmentTotal = tAdjustments.reduce((sum, adj) => sum + adj.points, 0);
-      const finalScore = totalScore + adjustmentTotal;
-      
-      return { teamCode: team.code, finalScore };
-    }).sort((a, b) => b.finalScore - a.finalScore);
+      return teamMatches
+        .map(match => match.score)
+        .sort((a, b) => b - a)
+        .slice(0, countedMatches);
+    } catch (error) {
+      console.error('❌ Errore calcolo best scores:', error);
+      return [];
+    }
+  }, [teamMatches, currentTournament]);
 
-    const position = leaderboard.findIndex(team => team.teamCode === teamCode) + 1;
-    return position > 0 ? position : null;
-  };
+  const getTotalScore = React.useCallback(() => {
+    try {
+      const bestScores = getBestScores();
+      return bestScores.reduce((sum, score) => sum + score, 0);
+    } catch (error) {
+      console.error('❌ Errore calcolo total score:', error);
+      return 0;
+    }
+  }, [getBestScores]);
+
+  const getAdjustmentTotal = React.useCallback(() => {
+    try {
+      return teamAdjustments.reduce((sum, adj) => sum + adj.points, 0);
+    } catch (error) {
+      console.error('❌ Errore calcolo adjustment total:', error);
+      return 0;
+    }
+  }, [teamAdjustments]);
+
+  const getFinalScore = React.useCallback(() => {
+    try {
+      return getTotalScore() + getAdjustmentTotal();
+    } catch (error) {
+      console.error('❌ Errore calcolo final score:', error);
+      return 0;
+    }
+  }, [getTotalScore, getAdjustmentTotal]);
+
+  const getCurrentPosition = React.useCallback(() => {
+    try {
+      // Calculate current position in tournament leaderboard
+      const tournamentTeams = Object.values(teams).filter(team => team.tournamentId === tournamentId);
+      const leaderboard = tournamentTeams.map(team => {
+        const tMatches = matches.filter(m => m.teamCode === team.code && m.tournamentId === tournamentId && m.status === 'approved');
+        const tAdjustments = scoreAdjustments.filter(adj => adj.teamCode === team.code && adj.tournamentId === tournamentId);
+        
+        const countedMatches = currentTournament?.settings.countedMatches || 3;
+        const bestScores = tMatches.map(m => m.score).sort((a, b) => b - a).slice(0, countedMatches);
+        const totalScore = bestScores.reduce((sum, score) => sum + score, 0);
+        const adjustmentTotal = tAdjustments.reduce((sum, adj) => sum + adj.points, 0);
+        const finalScore = totalScore + adjustmentTotal;
+        
+        return { teamCode: team.code, finalScore };
+      }).sort((a, b) => b.finalScore - a.finalScore);
+
+      const position = leaderboard.findIndex(team => team.teamCode === teamCode) + 1;
+      return position > 0 ? position : null;
+    } catch (error) {
+      console.error('❌ Errore calcolo posizione:', error);
+      return null;
+    }
+  }, [teams, matches, scoreAdjustments, teamCode, tournamentId, currentTournament]);
 
   const exportImage = async () => {
-    const element = document.getElementById('team-stats');
-    if (!element) return;
-
     try {
+      const element = document.getElementById('team-stats');
+      if (!element) return;
+
       const canvas = await html2canvas(element);
       const url = canvas.toDataURL('image/png');
       const a = document.createElement('a');
@@ -163,6 +242,7 @@ export default function TeamDashboard({ teamCode, tournamentId, onLogout }: Team
       a.click();
     } catch (error) {
       console.error('Error generating image:', error);
+      alert('Errore durante l\'esportazione dell\'immagine');
     }
   };
 
