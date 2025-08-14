@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Users, Trophy, Settings, Download, Image, RotateCcw, Sliders, Clock, AlertTriangle, X, UserPlus, CheckCircle, XCircle, Plus, Minus } from 'lucide-react';
 import GlassPanel from './GlassPanel';
-import MultiplierSettings from './MultiplierSettings';
 import PendingSubmissions from './PendingSubmissions';
 import TeamCodeDisplay from './TeamCodeDisplay';
 import PenaltiesRewards from './PenaltiesRewards';
@@ -50,21 +49,80 @@ export default function TournamentManagement({
   multipliers
 }: TournamentManagementProps) {
   const [activeSection, setActiveSection] = useState<'teams' | 'scores' | 'pending' | 'adjustments' | 'managers' | 'audit'>('teams');
-  const [showMultiplierSettings, setShowMultiplierSettings] = useState(false);
   const [showTeamCode, setShowTeamCode] = useState<{ name: string; code: string } | null>(null);
   
   const [selectedLobby, setSelectedLobby] = useState(1);
   const [selectedSlot, setSelectedSlot] = useState(1);
   const [teamName, setTeamName] = useState('');
 
+  // Gestione sicura del torneo con fallback
   const tournament = tournaments[tournamentId];
-  if (!tournament) return null;
+  if (!tournament) {
+    console.error(`❌ Torneo non trovato: ${tournamentId}`);
+    return (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <GlassPanel className="p-6 text-center">
+          <AlertTriangle className="w-16 h-16 mx-auto mb-4 text-red-400" />
+          <h2 className="text-xl font-bold text-white mb-2 font-mono">TORNEO NON TROVATO</h2>
+          <p className="text-red-400/80 font-mono text-sm mb-4">
+            Il torneo richiesto non esiste o è stato eliminato
+          </p>
+          <button
+            onClick={onClose}
+            className="px-6 py-3 bg-red-500/20 border border-red-500/50 text-red-400 rounded-xl hover:bg-red-500/30 transition-colors font-mono"
+          >
+            CHIUDI
+          </button>
+        </GlassPanel>
+      </div>
+    );
+  }
 
-  const tournamentTeams = Object.values(teams).filter(team => team.tournamentId === tournamentId);
-  const tournamentMatches = matches.filter(match => match.tournamentId === tournamentId);
-  const tournamentPending = pendingSubmissions.filter(sub => sub.tournamentId === tournamentId);
-  const tournamentAdjustments = scoreAdjustments.filter(adj => adj.tournamentId === tournamentId);
-  const activeManagers = Object.values(managers).filter(m => m.isActive);
+  // Filtri sicuri con gestione errori
+  const tournamentTeams = React.useMemo(() => {
+    try {
+      return Object.values(teams || {}).filter(team => team && team.tournamentId === tournamentId);
+    } catch (error) {
+      console.error('❌ Errore filtro teams:', error);
+      return [];
+    }
+  }, [teams, tournamentId]);
+
+  const tournamentMatches = React.useMemo(() => {
+    try {
+      return (matches || []).filter(match => match && match.tournamentId === tournamentId);
+    } catch (error) {
+      console.error('❌ Errore filtro matches:', error);
+      return [];
+    }
+  }, [matches, tournamentId]);
+
+  const tournamentPending = React.useMemo(() => {
+    try {
+      return (pendingSubmissions || []).filter(sub => sub && sub.tournamentId === tournamentId);
+    } catch (error) {
+      console.error('❌ Errore filtro pending:', error);
+      return [];
+    }
+  }, [pendingSubmissions, tournamentId]);
+
+  const tournamentAdjustments = React.useMemo(() => {
+    try {
+      return (scoreAdjustments || []).filter(adj => adj && adj.tournamentId === tournamentId);
+    } catch (error) {
+      console.error('❌ Errore filtro adjustments:', error);
+      return [];
+    }
+  }, [scoreAdjustments, tournamentId]);
+
+  const activeManagers = React.useMemo(() => {
+    try {
+      return Object.values(managers || {}).filter(m => m && m.isActive);
+    } catch (error) {
+      console.error('❌ Errore filtro managers:', error);
+      return [];
+    }
+  }, [managers]);
 
   const getTeamKey = (lobby: number, slot: number) => {
     return tournament.type === 'Ritorno' 
@@ -72,315 +130,365 @@ export default function TournamentManagement({
       : `${tournamentId}-Slot${slot}`;
   };
 
-  const getLeaderboard = (): TeamStats[] => {
-    const teamStats: Record<string, TeamStats> = {};
+  const getLeaderboard = React.useCallback((): TeamStats[] => {
+    try {
+      const teamStats: Record<string, TeamStats> = {};
 
-    // Initialize team stats
-    tournamentTeams.forEach(team => {
-      teamStats[team.code] = {
-        teamName: team.name,
-        teamCode: team.code,
-        matches: [],
-        adjustments: [],
-        totalScore: 0,
-        adjustmentTotal: 0,
-        finalScore: 0,
-        rank: 0
-      };
-    });
+      // Initialize team stats
+      tournamentTeams.forEach(team => {
+        teamStats[team.code] = {
+          teamName: team.name,
+          teamCode: team.code,
+          matches: [],
+          adjustments: [],
+          totalScore: 0,
+          adjustmentTotal: 0,
+          finalScore: 0,
+          rank: 0
+        };
+      });
 
-    // Add matches
-    tournamentMatches.filter(match => match.status === 'approved').forEach(match => {
-      if (teamStats[match.teamCode]) {
-        teamStats[match.teamCode].matches.push(match);
-      }
-    });
+      // Add matches
+      tournamentMatches.filter(match => match.status === 'approved').forEach(match => {
+        if (teamStats[match.teamCode]) {
+          teamStats[match.teamCode].matches.push(match);
+        }
+      });
 
-    // Add adjustments
-    tournamentAdjustments.forEach(adjustment => {
-      if (teamStats[adjustment.teamCode]) {
-        teamStats[adjustment.teamCode].adjustments.push(adjustment);
-      }
-    });
+      // Add adjustments
+      tournamentAdjustments.forEach(adjustment => {
+        if (teamStats[adjustment.teamCode]) {
+          teamStats[adjustment.teamCode].adjustments.push(adjustment);
+        }
+      });
 
-    // Calculate scores
-    Object.values(teamStats).forEach(team => {
-      // Calculate match scores (best counted matches)
-      const countedMatches = tournament.settings.countedMatches || 3;
-      const sortedScores = team.matches
-        .map(match => match.score)
-        .sort((a, b) => b - a)
-        .slice(0, countedMatches);
-      team.totalScore = sortedScores.reduce((sum, score) => sum + score, 0);
+      // Calculate scores
+      Object.values(teamStats).forEach(team => {
+        // Calculate match scores (best counted matches)
+        const countedMatches = tournament.settings.countedMatches || 3;
+        const sortedScores = team.matches
+          .map(match => match.score)
+          .sort((a, b) => b - a)
+          .slice(0, countedMatches);
+        team.totalScore = sortedScores.reduce((sum, score) => sum + score, 0);
 
-      // Calculate adjustment total
-      team.adjustmentTotal = team.adjustments.reduce((sum, adj) => sum + adj.points, 0);
+        // Calculate adjustment total
+        team.adjustmentTotal = team.adjustments.reduce((sum, adj) => sum + adj.points, 0);
 
-      // Calculate final score
-      team.finalScore = team.totalScore + team.adjustmentTotal;
-    });
+        // Calculate final score
+        team.finalScore = team.totalScore + team.adjustmentTotal;
+      });
 
-    // Sort by final score and assign ranks
-    const sorted = Object.values(teamStats)
-      .filter(team => team.matches.length > 0 || team.adjustments.length > 0)
-      .sort((a, b) => b.finalScore - a.finalScore);
+      // Sort by final score and assign ranks
+      const sorted = Object.values(teamStats)
+        .filter(team => team.matches.length > 0 || team.adjustments.length > 0)
+        .sort((a, b) => b.finalScore - a.finalScore);
 
-    sorted.forEach((team, index) => {
-      team.rank = index + 1;
-    });
+      sorted.forEach((team, index) => {
+        team.rank = index + 1;
+      });
 
-    return sorted;
-  };
+      return sorted;
+    } catch (error) {
+      console.error('❌ Errore calcolo leaderboard:', error);
+      return [];
+    }
+  }, [tournamentTeams, tournamentMatches, tournamentAdjustments, tournament]);
 
   const registerTeam = () => {
-    if (!teamName.trim()) return;
-    
-    const key = getTeamKey(selectedLobby, selectedSlot);
-    const code = generateUniqueTeamCode(teams);
-    
-    const newTeam: Team = {
-      id: key,
-      name: teamName.trim(),
-      code,
-      lobby: key,
-      lobbyNumber: tournament.type === 'Ritorno' ? selectedLobby : undefined,
-      createdAt: Date.now(),
-      tournamentId
-    };
+    try {
+      if (!teamName.trim()) return;
+      
+      const key = getTeamKey(selectedLobby, selectedSlot);
+      const code = generateUniqueTeamCode(teams);
+      
+      const newTeam: Team = {
+        id: key,
+        name: teamName.trim(),
+        code,
+        lobby: key,
+        lobbyNumber: tournament.type === 'Ritorno' ? selectedLobby : undefined,
+        createdAt: Date.now(),
+        tournamentId
+      };
 
-    setTeams(prev => ({ ...prev, [key]: newTeam }));
-    setTeamName('');
-    
-    // Show the generated code
-    setShowTeamCode({ name: teamName.trim(), code });
+      setTeams(prev => ({ ...prev, [key]: newTeam }));
+      setTeamName('');
+      
+      // Show the generated code
+      setShowTeamCode({ name: teamName.trim(), code });
 
-    // Log action
-    logAction(
-      auditLogs,
-      setAuditLogs,
-      'TEAM_REGISTERED',
-      `Squadra registrata: ${teamName.trim()} (${code}) in ${key}`,
-      'admin',
-      'admin',
-      { teamCode: code, teamName: teamName.trim(), tournamentId, lobby: key }
-    );
+      // Log action
+      logAction(
+        auditLogs,
+        setAuditLogs,
+        'TEAM_REGISTERED',
+        `Squadra registrata: ${teamName.trim()} (${code}) in ${key}`,
+        'admin',
+        'admin',
+        { teamCode: code, teamName: teamName.trim(), tournamentId, lobby: key }
+      );
+    } catch (error) {
+      console.error('❌ Errore registrazione team:', error);
+      alert('Errore durante la registrazione della squadra');
+    }
   };
 
   const removeTeam = (teamId: string) => {
-    const team = teams[teamId];
-    if (!team) return;
+    try {
+      const team = teams[teamId];
+      if (!team) return;
 
-    if (!confirm(`Sei sicuro di voler rimuovere la squadra ${team.name}?`)) return;
+      if (!confirm(`Sei sicuro di voler rimuovere la squadra ${team.name}?`)) return;
 
-    // Remove team
-    setTeams(prev => {
-      const newTeams = { ...prev };
-      delete newTeams[teamId];
-      return newTeams;
-    });
+      // Remove team
+      setTeams(prev => {
+        const newTeams = { ...prev };
+        delete newTeams[teamId];
+        return newTeams;
+      });
 
-    // Remove team matches
-    setMatches(prev => prev.filter(match => match.teamCode !== team.code));
+      // Remove team matches
+      setMatches(prev => prev.filter(match => match.teamCode !== team.code));
 
-    // Remove team pending submissions
-    setPendingSubmissions(prev => prev.filter(sub => sub.teamCode !== team.code));
+      // Remove team pending submissions
+      setPendingSubmissions(prev => prev.filter(sub => sub.teamCode !== team.code));
 
-    // Remove team adjustments
-    setScoreAdjustments(prev => prev.filter(adj => adj.teamCode !== team.code));
+      // Remove team adjustments
+      setScoreAdjustments(prev => prev.filter(adj => adj.teamCode !== team.code));
 
-    logAction(
-      auditLogs,
-      setAuditLogs,
-      'TEAM_REMOVED',
-      `Squadra rimossa: ${team.name} (${team.code})`,
-      'admin',
-      'admin',
-      { teamCode: team.code, teamName: team.name, tournamentId }
-    );
+      logAction(
+        auditLogs,
+        setAuditLogs,
+        'TEAM_REMOVED',
+        `Squadra rimossa: ${team.name} (${team.code})`,
+        'admin',
+        'admin',
+        { teamCode: team.code, teamName: team.name, tournamentId }
+      );
+    } catch (error) {
+      console.error('❌ Errore rimozione team:', error);
+      alert('Errore durante la rimozione della squadra');
+    }
   };
 
   const approveSubmission = (submissionId: string) => {
-    const submission = pendingSubmissions.find(s => s.id === submissionId);
-    if (!submission) return;
+    try {
+      const submission = pendingSubmissions.find(s => s.id === submissionId);
+      if (!submission) return;
 
-    const multiplier = multipliers[submission.position] || 1;
-    const score = submission.kills * multiplier;
+      const multiplier = multipliers[submission.position] || 1;
+      const score = submission.kills * multiplier;
 
-    const newMatch: Match = {
-      id: `${submission.teamCode}-${Date.now()}`,
-      position: submission.position,
-      kills: submission.kills,
-      score,
-      teamCode: submission.teamCode,
-      photos: submission.photos,
-      status: 'approved',
-      submittedAt: submission.submittedAt,
-      reviewedAt: Date.now(),
-      reviewedBy: 'admin',
-      tournamentId
-    };
+      const newMatch: Match = {
+        id: `${submission.teamCode}-${Date.now()}`,
+        position: submission.position,
+        kills: submission.kills,
+        score,
+        teamCode: submission.teamCode,
+        photos: submission.photos,
+        status: 'approved',
+        submittedAt: submission.submittedAt,
+        reviewedAt: Date.now(),
+        reviewedBy: 'admin',
+        tournamentId
+      };
 
-    setMatches(prev => [...prev, newMatch]);
-    setPendingSubmissions(prev => prev.filter(s => s.id !== submissionId));
+      setMatches(prev => [...prev, newMatch]);
+      setPendingSubmissions(prev => prev.filter(s => s.id !== submissionId));
 
-    logAction(
-      auditLogs,
-      setAuditLogs,
-      'SUBMISSION_APPROVED',
-      `Sottomissione approvata per ${submission.teamName}: ${submission.position}° posto, ${submission.kills} kills`,
-      'admin',
-      'admin',
-      { teamCode: submission.teamCode, submissionId, tournamentId }
-    );
+      logAction(
+        auditLogs,
+        setAuditLogs,
+        'SUBMISSION_APPROVED',
+        `Sottomissione approvata per ${submission.teamName}: ${submission.position}° posto, ${submission.kills} kills`,
+        'admin',
+        'admin',
+        { teamCode: submission.teamCode, submissionId, tournamentId }
+      );
+    } catch (error) {
+      console.error('❌ Errore approvazione submission:', error);
+      alert('Errore durante l\'approvazione');
+    }
   };
 
   const rejectSubmission = (submissionId: string) => {
-    const submission = pendingSubmissions.find(s => s.id === submissionId);
-    if (!submission) return;
+    try {
+      const submission = pendingSubmissions.find(s => s.id === submissionId);
+      if (!submission) return;
 
-    setPendingSubmissions(prev => prev.filter(s => s.id !== submissionId));
+      setPendingSubmissions(prev => prev.filter(s => s.id !== submissionId));
 
-    logAction(
-      auditLogs,
-      setAuditLogs,
-      'SUBMISSION_REJECTED',
-      `Sottomissione rifiutata per ${submission.teamName}`,
-      'admin',
-      'admin',
-      { teamCode: submission.teamCode, submissionId, tournamentId }
-    );
+      logAction(
+        auditLogs,
+        setAuditLogs,
+        'SUBMISSION_REJECTED',
+        `Sottomissione rifiutata per ${submission.teamName}`,
+        'admin',
+        'admin',
+        { teamCode: submission.teamCode, submissionId, tournamentId }
+      );
+    } catch (error) {
+      console.error('❌ Errore rifiuto submission:', error);
+      alert('Errore durante il rifiuto');
+    }
   };
 
   const addScoreAdjustment = (adjustmentData: Omit<ScoreAdjustment, 'id' | 'appliedAt' | 'appliedBy' | 'tournamentId'>) => {
-    const newAdjustment: ScoreAdjustment = {
-      ...adjustmentData,
-      id: `adj-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      appliedAt: Date.now(),
-      appliedBy: 'admin',
-      tournamentId
-    };
+    try {
+      const newAdjustment: ScoreAdjustment = {
+        ...adjustmentData,
+        id: `adj-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        appliedAt: Date.now(),
+        appliedBy: 'admin',
+        tournamentId
+      };
 
-    setScoreAdjustments(prev => [...prev, newAdjustment]);
+      setScoreAdjustments(prev => [...prev, newAdjustment]);
 
-    logAction(
-      auditLogs,
-      setAuditLogs,
-      'SCORE_ADJUSTMENT',
-      `${adjustmentData.type === 'penalty' ? 'Penalità' : 'Ricompensa'} applicata a ${adjustmentData.teamName}: ${adjustmentData.points > 0 ? '+' : ''}${adjustmentData.points} punti - ${adjustmentData.reason}`,
-      'admin',
-      'admin',
-      { teamCode: adjustmentData.teamCode, type: adjustmentData.type, points: adjustmentData.points, tournamentId }
-    );
+      logAction(
+        auditLogs,
+        setAuditLogs,
+        'SCORE_ADJUSTMENT',
+        `${adjustmentData.type === 'penalty' ? 'Penalità' : 'Ricompensa'} applicata a ${adjustmentData.teamName}: ${adjustmentData.points > 0 ? '+' : ''}${adjustmentData.points} punti - ${adjustmentData.reason}`,
+        'admin',
+        'admin',
+        { teamCode: adjustmentData.teamCode, type: adjustmentData.type, points: adjustmentData.points, tournamentId }
+      );
+    } catch (error) {
+      console.error('❌ Errore aggiunta adjustment:', error);
+      alert('Errore durante l\'applicazione della modifica');
+    }
   };
 
   const assignManager = (managerCode: string) => {
-    const manager = managers[managerCode];
-    if (!manager || tournament.assignedManagers.includes(managerCode)) return;
+    try {
+      const manager = managers[managerCode];
+      if (!manager || tournament.assignedManagers.includes(managerCode)) return;
 
-    setTournaments(prev => ({
-      ...prev,
-      [tournamentId]: {
-        ...tournament,
-        assignedManagers: [...tournament.assignedManagers, managerCode]
-      }
-    }));
+      setTournaments(prev => ({
+        ...prev,
+        [tournamentId]: {
+          ...tournament,
+          assignedManagers: [...tournament.assignedManagers, managerCode]
+        }
+      }));
 
-    logAction(
-      auditLogs,
-      setAuditLogs,
-      'MANAGER_ASSIGNED',
-      `Gestore ${manager.name} assegnato al torneo ${tournament.name}`,
-      'admin',
-      'admin',
-      { managerCode, managerName: manager.name, tournamentId }
-    );
+      logAction(
+        auditLogs,
+        setAuditLogs,
+        'MANAGER_ASSIGNED',
+        `Gestore ${manager.name} assegnato al torneo ${tournament.name}`,
+        'admin',
+        'admin',
+        { managerCode, managerName: manager.name, tournamentId }
+      );
+    } catch (error) {
+      console.error('❌ Errore assegnazione manager:', error);
+      alert('Errore durante l\'assegnazione del gestore');
+    }
   };
 
   const removeManager = (managerCode: string) => {
-    const manager = managers[managerCode];
-    if (!manager) return;
+    try {
+      const manager = managers[managerCode];
+      if (!manager) return;
 
-    setTournaments(prev => ({
-      ...prev,
-      [tournamentId]: {
-        ...tournament,
-        assignedManagers: tournament.assignedManagers.filter(code => code !== managerCode)
-      }
-    }));
+      setTournaments(prev => ({
+        ...prev,
+        [tournamentId]: {
+          ...tournament,
+          assignedManagers: tournament.assignedManagers.filter(code => code !== managerCode)
+        }
+      }));
 
-    logAction(
-      auditLogs,
-      setAuditLogs,
-      'MANAGER_REMOVED',
-      `Gestore ${manager.name} rimosso dal torneo ${tournament.name}`,
-      'admin',
-      'admin',
-      { managerCode, managerName: manager.name, tournamentId }
-    );
+      logAction(
+        auditLogs,
+        setAuditLogs,
+        'MANAGER_REMOVED',
+        `Gestore ${manager.name} rimosso dal torneo ${tournament.name}`,
+        'admin',
+        'admin',
+        { managerCode, managerName: manager.name, tournamentId }
+      );
+    } catch (error) {
+      console.error('❌ Errore rimozione manager:', error);
+      alert('Errore durante la rimozione del gestore');
+    }
   };
 
   const completeTournament = () => {
-    if (!confirm(`Sei sicuro di voler completare il torneo "${tournament.name}"? Non sarà più possibile modificarlo.`)) return;
+    try {
+      if (!confirm(`Sei sicuro di voler completare il torneo "${tournament.name}"? Non sarà più possibile modificarlo.`)) return;
 
-    // Calculate final leaderboard before completing
-    const finalLeaderboard = getLeaderboard();
+      // Calculate final leaderboard before completing
+      const finalLeaderboard = getLeaderboard();
 
-    setTournaments(prev => ({
-      ...prev,
-      [tournamentId]: {
-        ...tournament,
-        status: 'completed',
-        endedAt: Date.now(),
-        completedAt: Date.now(),
-        finalLeaderboard
-      }
-    }));
+      setTournaments(prev => ({
+        ...prev,
+        [tournamentId]: {
+          ...tournament,
+          status: 'completed',
+          endedAt: Date.now(),
+          completedAt: Date.now(),
+          finalLeaderboard
+        }
+      }));
 
-    logAction(
-      auditLogs,
-      setAuditLogs,
-      'TOURNAMENT_COMPLETED',
-      `Torneo completato: ${tournament.name}`,
-      'admin',
-      'admin',
-      { tournamentId }
-    );
+      logAction(
+        auditLogs,
+        setAuditLogs,
+        'TOURNAMENT_COMPLETED',
+        `Torneo completato: ${tournament.name}`,
+        'admin',
+        'admin',
+        { tournamentId }
+      );
 
-    onClose();
+      onClose();
+    } catch (error) {
+      console.error('❌ Errore completamento torneo:', error);
+      alert('Errore durante il completamento del torneo');
+    }
   };
 
   const exportCSV = () => {
-    const leaderboard = getLeaderboard();
-    let csv = 'Rank,Team,Code,Match Score,Adjustments,Final Score,Matches Played\n';
-    
-    leaderboard.forEach(team => {
-      csv += `${team.rank},${team.teamName},${team.teamCode},${team.totalScore.toFixed(1)},${team.adjustmentTotal > 0 ? '+' : ''}${team.adjustmentTotal.toFixed(1)},${team.finalScore.toFixed(1)},${team.matches.length}\n`;
-    });
+    try {
+      const leaderboard = getLeaderboard();
+      let csv = 'Rank,Team,Code,Match Score,Adjustments,Final Score,Matches Played\n';
+      
+      leaderboard.forEach(team => {
+        csv += `${team.rank},${team.teamName},${team.teamCode},${team.totalScore.toFixed(1)},${team.adjustmentTotal > 0 ? '+' : ''}${team.adjustmentTotal.toFixed(1)},${team.finalScore.toFixed(1)},${team.matches.length}\n`;
+      });
 
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${tournament.name.toLowerCase().replace(/\s+/g, '_')}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${tournament.name.toLowerCase().replace(/\s+/g, '_')}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
 
-    logAction(
-      auditLogs,
-      setAuditLogs,
-      'EXPORT_CSV',
-      `Classifica esportata in CSV per torneo ${tournament.name}`,
-      'admin',
-      'admin',
-      { tournamentId, format: 'CSV' }
-    );
+      logAction(
+        auditLogs,
+        setAuditLogs,
+        'EXPORT_CSV',
+        `Classifica esportata in CSV per torneo ${tournament.name}`,
+        'admin',
+        'admin',
+        { tournamentId, format: 'CSV' }
+      );
+    } catch (error) {
+      console.error('❌ Errore export CSV:', error);
+      alert('Errore durante l\'esportazione CSV');
+    }
   };
 
   const exportImage = async () => {
-    const element = document.getElementById('tournament-leaderboard');
-    if (!element) return;
-
     try {
+      const element = document.getElementById('tournament-leaderboard');
+      if (!element) return;
+
       const canvas = await html2canvas(element);
       const url = canvas.toDataURL('image/png');
       const a = document.createElement('a');
@@ -399,10 +507,19 @@ export default function TournamentManagement({
       );
     } catch (error) {
       console.error('Error generating image:', error);
+      alert('Errore durante l\'esportazione immagine');
     }
   };
 
-  const leaderboard = getLeaderboard();
+  // Calcolo sicuro della leaderboard
+  const leaderboard = React.useMemo(() => {
+    try {
+      return getLeaderboard();
+    } catch (error) {
+      console.error('❌ Errore calcolo leaderboard:', error);
+      return [];
+    }
+  }, [getLeaderboard]);
 
   const sectionItems = [
     { id: 'teams', label: 'SQUADRE', icon: Users },
@@ -538,10 +655,8 @@ export default function TournamentManagement({
                     <div key={team.id} className="p-3 bg-black/20 border border-ice-blue/20 rounded-lg animate-fade-in">
                       <div className="flex items-center justify-between">
                         <div>
+                          <div className="text-white font-bold font-mono">{team.name}</div>
                           <div className="text-ice-blue font-mono text-sm">{team.lobby}</div>
-                          <div className="text-ice-blue/60 text-sm font-mono">
-                            Gestore • {manager.permissions.length} permessi
-                          </div>
                           <div className="text-ice-blue/60 font-mono text-xs">Codice: {team.code}</div>
                         </div>
                         <button
@@ -589,7 +704,9 @@ export default function TournamentManagement({
                         <div className="flex items-center justify-between">
                           <div>
                             <div className="text-white font-bold font-mono">{manager.name}</div>
-                            <div className="text-ice-blue/60 text-sm font-mono">{manager.code}</div>
+                            <div className="text-ice-blue/60 text-sm font-mono">
+                              Gestore • {manager.permissions.length} permessi
+                            </div>
                           </div>
                           <button
                             onClick={() => assignManager(manager.code)}

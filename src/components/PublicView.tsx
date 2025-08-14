@@ -15,9 +15,18 @@ export default function PublicView({ onShowLogin }: PublicViewProps) {
   const [scoreAdjustments] = useRealTimeData<ScoreAdjustment[]>('scoreAdjustments', []);
   const [selectedTournament, setSelectedTournament] = useState<string>('');
 
-  const activeTournaments = Object.values(tournaments).filter(t => t.status === 'active');
+  // Filtro sicuro per tornei attivi
+  const activeTournaments = React.useMemo(() => {
+    try {
+      return Object.values(tournaments || {}).filter(t => t && t.status === 'active');
+    } catch (error) {
+      console.error('❌ Errore filtro tornei attivi:', error);
+      return [];
+    }
+  }, [tournaments]);
 
-  const getLeaderboard = (tournamentId: string) => {
+  const getLeaderboard = React.useCallback((tournamentId: string) => {
+    try {
     const tournamentTeams = Object.values(teams).filter(team => team.tournamentId === tournamentId);
     const tournamentMatches = matches.filter(match => 
       match.tournamentId === tournamentId && match.status === 'approved'
@@ -57,7 +66,11 @@ export default function PublicView({ onShowLogin }: PublicViewProps) {
     return Object.values(teamStats)
       .filter(team => team.matches > 0)
       .sort((a, b) => b.finalScore - a.finalScore);
-  };
+    } catch (error) {
+      console.error('❌ Errore calcolo leaderboard pubblica:', error);
+      return [];
+    }
+  }, [teams, matches, scoreAdjustments]);
 
   return (
     <div className="min-h-screen p-4 relative z-10">

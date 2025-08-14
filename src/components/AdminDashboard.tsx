@@ -47,13 +47,36 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
   const [showOBSPlugin, setShowOBSPlugin] = useState(false);
   const [showScoreTest, setShowScoreTest] = useState(false);
 
-  const activeTournaments = Object.values(tournaments).filter(t => t.status === 'active');
-  const completedTournaments = Object.values(tournaments).filter(t => t.status === 'completed');
+  // Filtri sicuri con gestione errori
+  const activeTournaments = React.useMemo(() => {
+    try {
+      return Object.values(tournaments || {}).filter(t => t && t.status === 'active');
+    } catch (error) {
+      console.error('❌ Errore filtro tornei attivi:', error);
+      return [];
+    }
+  }, [tournaments]);
 
+  const completedTournaments = React.useMemo(() => {
+    try {
+      return Object.values(tournaments || {}).filter(t => t && t.status === 'completed');
+    } catch (error) {
+      console.error('❌ Errore filtro tornei completati:', error);
+      return [];
+    }
+  }, [tournaments]);
   // Get pending submissions count for all tournaments
-  const totalPendingCount = pendingSubmissions.length;
+  const totalPendingCount = React.useMemo(() => {
+    try {
+      return (pendingSubmissions || []).length;
+    } catch (error) {
+      console.error('❌ Errore conteggio pending:', error);
+      return 0;
+    }
+  }, [pendingSubmissions]);
 
   const createBlackCrowDemo = () => {
+    try {
     const demoId = `blackcrow-${Date.now()}`;
     const now = new Date();
     
@@ -372,9 +395,14 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
 
     setSelectedTournament(demoId);
     setActiveTab('tournaments');
+    } catch (error) {
+      console.error('❌ Errore creazione demo:', error);
+      alert('Errore durante la creazione della demo');
+    }
   };
 
   const stopDemo = () => {
+    try {
     const demoTournaments = Object.values(tournaments).filter(t => t.isDemo);
     
     demoTournaments.forEach(demo => {
@@ -416,9 +444,14 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
     });
 
     setSelectedTournament('');
+    } catch (error) {
+      console.error('❌ Errore stop demo:', error);
+      alert('Errore durante l\'interruzione della demo');
+    }
   };
 
   const copyToClipboard = async (text: string) => {
+    try {
     try {
       await navigator.clipboard.writeText(text);
     } catch (error) {
@@ -429,6 +462,9 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
       textArea.select();
       document.execCommand('copy');
       document.body.removeChild(textArea);
+    }
+    } catch (error) {
+      console.error('❌ Errore copia clipboard:', error);
     }
   };
 
